@@ -19,6 +19,70 @@ from rooms.models import Room
 from bookings.models import Booking
 
 
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        pin = request.data.get('pin', '').strip()
+        first_name = request.data.get('first_name', '').strip()
+        last_name = request.data.get('last_name', '').strip()
+        email = request.data.get('email', '').strip()
+        designation = request.data.get('designation', '').strip()
+
+        # Validate required fields
+        errors = {}
+        if not pin:
+            errors['pin'] = ['PIN is required']
+        if not first_name:
+            errors['first_name'] = ['First name is required']
+        if not last_name:
+            errors['last_name'] = ['Last name is required']
+        if not email:
+            errors['email'] = ['Email is required']
+        if not designation:
+            errors['designation'] = ['Designation is required']
+
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check duplicate PIN
+        if User.objects.filter(pin=pin).exists():
+            return Response(
+                {'pin': ['PIN already exists']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check duplicate email
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {'email': ['Email already exists']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create user with default password
+        user = User(
+            pin=pin,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            designation=designation,
+            role='Employee',
+            is_active=True,
+            must_change_password=True
+        )
+        user.set_password('Welcome@123')
+        user.save()
+
+        return Response(
+            {
+                'message': 'Registration successful',
+                'default_password': 'Welcome@123',
+                'user': UserSerializer(user).data,
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 

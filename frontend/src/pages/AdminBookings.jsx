@@ -12,6 +12,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
+import AdminLayout from '../components/AdminLayout';
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState([]);
@@ -126,7 +127,7 @@ export default function AdminBookings() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <AdminLayout>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
         <IconButton onClick={() => navigate(-1)}><ArrowBack /></IconButton>
@@ -147,7 +148,9 @@ export default function AdminBookings() {
             <TextField
               label="Filter by Date" type="date" value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              InputLabelProps={{ shrink: true }} size="small"
+              slotProps={{ inputLabel: { shrink: true } }}
+              size="small"
+              sx={{ minWidth: 200, ml: 0.5 }}
             />
             <FormControl size="small" sx={{ minWidth: 150 }}>
               <InputLabel>Room</InputLabel>
@@ -290,6 +293,6 @@ export default function AdminBookings() {
           </Dialog>
         )}
       </AnimatePresence>
-    </Box>
+    </AdminLayout>
   );
 }

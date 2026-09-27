@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
+import Navbar from '../components/Navbar';
 
 export default function ChangePassword() {
   const [oldPassword, setOldPassword] = useState('');
@@ -55,7 +56,9 @@ export default function ChangePassword() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#f8f9ff' }}>
+      <Navbar />
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6, px: 2 }}>
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -113,6 +116,7 @@ export default function ChangePassword() {
           </Box>
         </Paper>
       </motion.div>
+      </Box>
     </Box>
   );
 }

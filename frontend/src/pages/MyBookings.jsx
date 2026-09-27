@@ -7,10 +7,11 @@ import {
   DialogActions, TextField, CircularProgress, IconButton, Alert,
 } from '@mui/material';
 import {
-  ArrowBack, Cancel, MeetingRoom, Schedule, People, CheckCircle,
+  ArrowBack, Cancel, MeetingRoom, Schedule, People, CheckCircle, FilterList,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
+import EmployeeLayout from '../components/EmployeeLayout';
 
 export default function MyBookings() {
   const [bookings, setBookings] = useState([]);
@@ -19,6 +20,7 @@ export default function MyBookings() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [filterDate, setFilterDate] = useState('');
   const navigate = useNavigate();
 
   const fetchBookings = async () => {
@@ -63,11 +65,27 @@ export default function MyBookings() {
   const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
 
   return (
-    <Box sx={{ p: 3 }}>
+    <EmployeeLayout>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
         <IconButton onClick={() => navigate(-1)}><ArrowBack /></IconButton>
         <Typography variant="h5" fontWeight="bold">My Bookings</Typography>
+      </Box>
+
+      {/* Filter */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+        <TextField
+          label="Filter by Date" type="date" value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+          slotProps={{ inputLabel: { shrink: true } }}
+          size="small"
+          sx={{ minWidth: 200, ml: 0.5 }}
+        />
+        {filterDate && (
+          <Button variant="outlined" size="small" onClick={() => setFilterDate('')}>
+            Clear Filter
+          </Button>
+        )}
       </Box>
 
       {/* Active Bookings */}
@@ -192,6 +210,6 @@ export default function MyBookings() {
           </Dialog>
         )}
       </AnimatePresence>
-    </Box>
+    </EmployeeLayout>
   );
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Box, Typography, Button, Paper, TextField, MenuItem, Chip, Dialog,
+  Box, Typography, Button, Paper, TextField, Chip, Dialog,
   DialogTitle, DialogContent, DialogActions, Alert, CircularProgress,
   Card, CardContent, Grid, Divider, IconButton,
 } from '@mui/material';
@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
+import EmployeeLayout from '../components/EmployeeLayout';
 
 export default function BookRoom() {
   const [form, setForm] = useState({
@@ -84,7 +85,7 @@ export default function BookRoom() {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1000, mx: 'auto' }}>
+    <EmployeeLayout>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
         <IconButton onClick={() => navigate(-1)}><ArrowBack /></IconButton>
@@ -100,21 +101,24 @@ export default function BookRoom() {
               <TextField
                 fullWidth label="Date" type="date" value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
-                required InputLabelProps={{ shrink: true }}
+                required
+                slotProps={{ inputLabel: { shrink: true } }}
               />
             </Grid>
             <Grid item xs={12} md={3}>
               <TextField
                 fullWidth label="Start Time" type="time" value={form.start_time}
                 onChange={(e) => setForm({ ...form, start_time: e.target.value })}
-                required InputLabelProps={{ shrink: true }}
+                required
+                slotProps={{ inputLabel: { shrink: true } }}
               />
             </Grid>
             <Grid item xs={12} md={3}>
               <TextField
                 fullWidth label="End Time" type="time" value={form.end_time}
                 onChange={(e) => setForm({ ...form, end_time: e.target.value })}
-                required InputLabelProps={{ shrink: true }}
+                required
+                slotProps={{ inputLabel: { shrink: true } }}
               />
             </Grid>
             <Grid item xs={12} md={3}>
@@ -196,21 +200,9 @@ export default function BookRoom() {
                           <Chip label={s.room.floor} size="small" variant="outlined" />
                         </Box>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                          <Chip
-                            icon={<CalendarMonth />}
-                            label={s.date}
-                            size="small" color="primary"
-                          />
-                          <Chip
-                            icon={<AccessTime />}
-                            label={`${s.start_time} - ${s.end_time}`}
-                            size="small" color="secondary"
-                          />
-                          <Chip
-                            icon={<People />}
-                            label={`${s.room.min_occupancy}-${s.room.max_occupancy} people`}
-                            size="small"
-                          />
+                          <Chip icon={<CalendarMonth />} label={s.date} size="small" color="primary" />
+                          <Chip icon={<AccessTime />} label={`${s.start_time} - ${s.end_time}`} size="small" color="secondary" />
+                          <Chip icon={<People />} label={`${s.room.min_occupancy}-${s.room.max_occupancy} people`} size="small" />
                         </Box>
                       </CardContent>
                     </Card>
@@ -258,6 +250,6 @@ export default function BookRoom() {
           </Dialog>
         )}
       </AnimatePresence>
-    </Box>
+    </EmployeeLayout>
   );
 }

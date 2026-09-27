@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, Chip, CircularProgress,
-  List, ListItem, ListItemText, Divider, IconButton, Button,
+  List, ListItem, Divider, Button,
 } from '@mui/material';
 import {
-  ArrowBack, Event, Schedule, Cancel, Add, MeetingRoom,
+  Event, Schedule, Cancel, Add, MeetingRoom,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
+import EmployeeLayout from '../components/EmployeeLayout';
 
 export default function EmployeeDashboard() {
   const [data, setData] = useState(null);
@@ -41,20 +41,19 @@ export default function EmployeeDashboard() {
   const { stats, upcoming_bookings } = data;
 
   const statCards = [
-    { label: 'Upcoming Bookings', value: stats.upcoming_count, icon: <Event />, color: '#1976d2' },
-    { label: 'Past Bookings', value: stats.past_bookings, icon: <Schedule />, color: '#388e3c' },
+    { label: 'Upcoming Bookings', value: stats.upcoming_count, icon: <Event />, color: '#667eea' },
+    { label: 'Past Bookings', value: stats.past_bookings, icon: <Schedule />, color: '#11998e' },
     { label: 'Cancelled Bookings', value: stats.cancelled_bookings, icon: <Cancel />, color: '#d32f2f' },
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <EmployeeLayout>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate(-1)}><ArrowBack /></IconButton>
-          <Typography variant="h5" fontWeight="bold">My Dashboard</Typography>
-        </Box>
-        <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/employee/book')}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography variant="h4" fontWeight="bold">My Dashboard</Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/employee/book')}
+          sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 'bold', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+        >
           Book a Room
         </Button>
       </Box>
@@ -63,27 +62,21 @@ export default function EmployeeDashboard() {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {statCards.map((card, i) => (
           <Grid item xs={12} md={4} key={i}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <Card elevation={2} sx={{ borderTop: `4px solid ${card.color}` }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Box sx={{ color: card.color }}>{card.icon}</Box>
-                    <Typography variant="h4" fontWeight="bold">{card.value}</Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">{card.label}</Typography>
-                </CardContent>
-              </Card>
-            </motion.div>
+            <Card elevation={2} sx={{ borderRadius: 3, borderTop: `4px solid ${card.color}` }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box sx={{ color: card.color }}>{card.icon}</Box>
+                  <Typography variant="h4" fontWeight="bold">{card.value}</Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">{card.label}</Typography>
+              </CardContent>
+            </Card>
           </Grid>
         ))}
       </Grid>
 
       {/* Upcoming Bookings */}
-      <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+      <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
         <Typography variant="h6" gutterBottom>Upcoming Bookings</Typography>
         <List>
           {upcoming_bookings.length === 0 ? (
@@ -115,6 +108,6 @@ export default function EmployeeDashboard() {
           )}
         </List>
       </Paper>
-    </Box>
+    </EmployeeLayout>
   );
 }

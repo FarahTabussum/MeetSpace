@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
+import AdminLayout from '../components/AdminLayout';
 
 const defaultForm = {
   room_number: '', floor: '', min_occupancy: 1, max_occupancy: 10, is_active: true,
@@ -91,7 +92,7 @@ export default function RoomManagement() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <AdminLayout>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -211,6 +212,6 @@ export default function RoomManagement() {
           </Dialog>
         )}
       </AnimatePresence>
-    </Box>
+    </AdminLayout>
   );
 }

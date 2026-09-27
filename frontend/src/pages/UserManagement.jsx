@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
+import AdminLayout from '../components/AdminLayout';
 
 const defaultForm = {
   pin: '', first_name: '', last_name: '', email: '',
@@ -113,7 +114,7 @@ export default function UserManagement() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <AdminLayout>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -277,6 +278,6 @@ export default function UserManagement() {
           </Dialog>
         )}
       </AnimatePresence>
-    </Box>
+    </AdminLayout>
   );
 }
