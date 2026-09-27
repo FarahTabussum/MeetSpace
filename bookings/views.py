@@ -1,0 +1,203 @@
+from datetime import datetime, timedelta
+from rest_framework import status, generics
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
+from django.utils import timezone
+from .models import Booking
+from .serializers import BookingSerializer, BookingCreateSerializer, AvailabilitySearchSerializer
+from rooms.models import Room
+from rooms.serializers import RoomSerializer
+from accounts.permissions import IsHRAdmin
+
+
+class BookingListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return BookingCreateSerializer
+        return BookingSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'HR-Admin':
+            return Booking.objects.all()
+        return Booking.objects.filter(user=user)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        room = serializer.validated_data['room']
+        date = serializer.validated_data['date']
+        start_time = serializer.validated_data['start_time']
+        end_time = serializer.validated_data['end_time']
+        participants = serializer.validated_data['number_of_participants']
+
+        # Check room is active
+        if not room.is_active:
+            return Response(
+                {"error": "This room is not available."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check capacity
+        if participants < room.min_occupancy or participants > room.max_occupancy:
+            return Response(
+                {"error": f"This room supports {room.min_occupancy}-{room.max_occupancy} participants."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check for conflicts
+        conflicts = Booking.objects.filter(
+            room=room,
+            date=date,
+            status='active'
+        ).filter(
+            Q(start_time__lt=end_time) & Q(end_time__gt=start_time)
+        )
+
+        if conflicts.exists():
+            return Response(
+                {"error": "This room is already booked for the selected time slot."},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        booking = serializer.save(user=request.user)
+        return Response(
+            BookingSerializer(booking).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+class BookingDetailView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = BookingSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'HR-Admin':
+            return Booking.objects.all()
+        return Booking.objects.filter(user=user)
+
+
+class CancelBookingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            booking = Booking.objects.get(pk=pk)
+        except Booking.DoesNotExist:
+            return Response(
+                {"error": "Booking not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check permission
+        if request.user.role != 'HR-Admin' and booking.user != request.user:
+            return Response(
+                {"error": "You do not have permission to cancel this booking."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        reason = request.data.get('reason', '').strip()
+        if not reason:
+            return Response(
+                {"error": "Cancellation reason is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        booking.status = 'cancelled'
+        booking.cancellation_reason = reason
+        booking.cancelled_at = timezone.now()
+        booking.cancelled_by = request.user
+        booking.save()
+
+        return Response(
+            {"message": "Booking cancelled successfully."},
+            status=status.HTTP_200_OK
+        )
+
+
+class AvailabilitySearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = AvailabilitySearchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        date = serializer.validated_data['date']
+        start_time = serializer.validated_data['start_time']
+        end_time = serializer.validated_data['end_time']
+        participants = serializer.validated_data['number_of_participants']
+
+        # Get active rooms that fit capacity
+        suitable_rooms = Room.objects.filter(
+            is_active=True,
+            min_occupancy__lte=participants,
+            max_occupancy__gte=participants
+        )
+
+        # Find rooms with conflicts
+        conflicting_room_ids = Booking.objects.filter(
+            date=date,
+            status='active'
+        ).filter(
+            Q(start_time__lt=end_time) & Q(end_time__gt=start_time)
+        ).values_list('room_id', flat=True)
+
+        # Available rooms = suitable rooms minus conflicting
+        available_rooms = suitable_rooms.exclude(id__in=conflicting_room_ids)
+
+        # If no rooms available, find next best time suggestions
+        suggestions = []
+        if not available_rooms.exists():
+            suggestions = self._get_time_suggestions(date, start_time, end_time, participants)
+
+        return Response({
+            "available_rooms": RoomSerializer(available_rooms, many=True).data,
+            "suggestions": suggestions,
+        }, status=status.HTTP_200_OK)
+
+    def _get_time_suggestions(self, date, start_time, end_time, participants):
+        """Find the next available time slots for any suitable room."""
+        suitable_rooms = Room.objects.filter(
+            is_active=True,
+            min_occupancy__lte=participants,
+            max_occupancy__gte=participants
+        )
+
+        duration = datetime.combine(date, end_time) - datetime.combine(date, start_time)
+        suggestions = []
+
+        # Check next 30 slots (30-min increments) in 1-day window
+        for minutes in range(30, 30 * 31, 30):
+            new_start = datetime.combine(date, start_time) + timedelta(minutes=minutes)
+            new_end = new_start + duration
+
+            # Don't suggest times after 8 PM
+            if new_end.hour >= 20:
+                break
+
+            for room in suitable_rooms:
+                conflicts = Booking.objects.filter(
+                    room=room,
+                    date=date,
+                    status='active'
+                ).filter(
+                    Q(start_time__lt=new_end.time()) & Q(end_time__gt=new_start.time())
+                )
+
+                if not conflicts.exists():
+                    suggestions.append({
+                        "room": RoomSerializer(room).data,
+                        "date": date.isoformat(),
+                        "start_time": new_start.time().isoformat(),
+                        "end_time": new_end.time().isoformat(),
+                    })
+                    if len(suggestions) >= 5:
+                        return suggestions
+
+        return suggestions
