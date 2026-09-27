@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (
     LoginView, LogoutView, ChangePasswordView, UserProfileView,
-    UserListCreateView, UserDetailView, UserActivateDeactivateView, CSVUploadView
+    UserListCreateView, UserDetailView, UserActivateDeactivateView, CSVUploadView,
+    AdminDashboardView, EmployeeDashboardView
 )
 
 urlpatterns = [
@@ -14,4 +15,7 @@ urlpatterns = [
     path('users/<int:pk>/', UserDetailView.as_view(), name='user-detail'),
     path('users/<int:pk>/status/', UserActivateDeactivateView.as_view(), name='user-status'),
     path('users/upload-csv/', CSVUploadView.as_view(), name='user-csv-upload'),
+    # Dashboards
+    path('dashboard/admin/', AdminDashboardView.as_view(), name='admin-dashboard'),
+    path('dashboard/employee/', EmployeeDashboardView.as_view(), name='employee-dashboard'),
 ]

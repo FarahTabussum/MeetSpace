@@ -30,7 +30,7 @@ export default function Login() {
       if (user.must_change_password) {
         navigate('/change-password');
       } else {
-        navigate('/admin/users');
+        navigate(user.role === 'HR-Admin' ? '/admin/dashboard' : '/employee/dashboard');
       }
     } catch (err) {
       const msg = err.response?.data?.error || 'Login failed. Please try again.';

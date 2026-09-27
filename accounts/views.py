@@ -1,17 +1,22 @@
 import csv
 import io
+from datetime import date
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.db.models import Count, Q
+from django.utils import timezone
 from .models import User
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     LoginSerializer, ChangePasswordSerializer
 )
 from .permissions import IsHRAdmin
+from rooms.models import Room
+from bookings.models import Booking
 
 
 class LoginView(APIView):
@@ -192,28 +197,21 @@ class CSVUploadView(APIView):
                 row_number += 1
                 row_errors = []
 
-                # Check required fields
                 for field in required_fields:
                     if not row.get(field) or row.get(field).strip() == '':
                         row_errors.append(f"{field} is required")
 
-                # Validate role
                 if row.get('role') and row['role'] not in ['Employee', 'HR-Admin']:
                     row_errors.append(f"Invalid role '{row['role']}'. Must be 'Employee' or 'HR-Admin'")
 
-                # Check duplicate PIN
                 if row.get('pin') and User.objects.filter(pin=row['pin']).exists():
                     row_errors.append(f"PIN '{row['pin']}' already exists")
 
-                # Check duplicate email
                 if row.get('email') and User.objects.filter(email=row['email']).exists():
                     row_errors.append(f"Email '{row['email']}' already exists")
 
                 if row_errors:
-                    errors.append({
-                        "row": row_number,
-                        "errors": row_errors
-                    })
+                    errors.append({"row": row_number, "errors": row_errors})
                 else:
                     try:
                         user = User(
@@ -230,10 +228,7 @@ class CSVUploadView(APIView):
                         user.save()
                         success_count += 1
                     except Exception as e:
-                        errors.append({
-                            "row": row_number,
-                            "errors": [str(e)]
-                        })
+                        errors.append({"row": row_number, "errors": [str(e)]})
 
             return Response({
                 "message": f"CSV upload complete. {success_count} user(s) created.",
@@ -247,3 +242,76 @@ class CSVUploadView(APIView):
                 {"error": f"Failed to process CSV: {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+# ==================== Dashboards ====================
+
+class AdminDashboardView(APIView):
+    permission_classes = [IsAuthenticated, IsHRAdmin]
+
+    def get(self, request):
+        today = date.today()
+        total_users = User.objects.filter(is_active=True).count()
+        total_employees = User.objects.filter(role='Employee', is_active=True).count()
+        total_rooms = Room.objects.filter(is_active=True).count()
+        total_bookings_today = Booking.objects.filter(date=today, status='active').count()
+        upcoming_bookings = Booking.objects.filter(date__gte=today, status='active').count()
+        cancelled_bookings = Booking.objects.filter(status='cancelled').count()
+
+        recent_bookings = Booking.objects.filter(status='active').order_by('-date', '-start_time')[:5]
+
+        return Response({
+            "stats": {
+                "total_users": total_users,
+                "total_employees": total_employees,
+                "total_rooms": total_rooms,
+                "total_bookings_today": total_bookings_today,
+                "upcoming_bookings": upcoming_bookings,
+                "cancelled_bookings": cancelled_bookings,
+            },
+            "recent_bookings": [
+                {
+                    "id": b.id,
+                    "meeting_title": b.meeting_title,
+                    "room": b.room.room_number,
+                    "date": b.date,
+                    "start_time": b.start_time,
+                    "end_time": b.end_time,
+                    "user": b.user.get_full_name(),
+                }
+                for b in recent_bookings
+            ],
+        }, status=status.HTTP_200_OK)
+
+
+class EmployeeDashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        today = date.today()
+        my_active_bookings = Booking.objects.filter(user=user, status='active', date__gte=today)
+        upcoming_count = my_active_bookings.count()
+        past_bookings = Booking.objects.filter(user=user, status='active', date__lt=today).count()
+        cancelled_bookings = Booking.objects.filter(user=user, status='cancelled').count()
+
+        upcoming = my_active_bookings.order_by('date', 'start_time')[:5]
+
+        return Response({
+            "stats": {
+                "upcoming_count": upcoming_count,
+                "past_bookings": past_bookings,
+                "cancelled_bookings": cancelled_bookings,
+            },
+            "upcoming_bookings": [
+                {
+                    "id": b.id,
+                    "meeting_title": b.meeting_title,
+                    "room": b.room.room_number,
+                    "date": b.date,
+                    "start_time": b.start_time,
+                    "end_time": b.end_time,
+                }
+                for b in upcoming
+            ],
+        }, status=status.HTTP_200_OK)

@@ -162,7 +162,7 @@ class AvailabilitySearchView(APIView):
         }, status=status.HTTP_200_OK)
 
     def _get_time_suggestions(self, date, start_time, end_time, participants):
-        """Find the next available time slots for any suitable room."""
+        """Find the next available time slots across multiple days."""
         suitable_rooms = Room.objects.filter(
             is_active=True,
             min_occupancy__lte=participants,
@@ -172,32 +172,40 @@ class AvailabilitySearchView(APIView):
         duration = datetime.combine(date, end_time) - datetime.combine(date, start_time)
         suggestions = []
 
-        # Check next 30 slots (30-min increments) in 1-day window
-        for minutes in range(30, 30 * 31, 30):
-            new_start = datetime.combine(date, start_time) + timedelta(minutes=minutes)
-            new_end = new_start + duration
+        # Search current day + next 2 days
+        for day_offset in range(3):
+            search_date = date + timedelta(days=day_offset)
 
-            # Don't suggest times after 8 PM
-            if new_end.hour >= 20:
-                break
+            # Try 30-minute increments from 8 AM to 8 PM
+            for minutes in range(0, 12 * 60 + 1, 30):
+                new_start = datetime.combine(search_date, datetime.min.time()) + timedelta(hours=8, minutes=minutes)
+                new_end = new_start + duration
 
-            for room in suitable_rooms:
-                conflicts = Booking.objects.filter(
-                    room=room,
-                    date=date,
-                    status='active'
-                ).filter(
-                    Q(start_time__lt=new_end.time()) & Q(end_time__gt=new_start.time())
-                )
+                # Don't suggest times after 8 PM
+                if new_end.hour >= 20:
+                    break
 
-                if not conflicts.exists():
-                    suggestions.append({
-                        "room": RoomSerializer(room).data,
-                        "date": date.isoformat(),
-                        "start_time": new_start.time().isoformat(),
-                        "end_time": new_end.time().isoformat(),
-                    })
-                    if len(suggestions) >= 5:
-                        return suggestions
+                # Skip past times for current day
+                if day_offset == 0 and new_start.time() <= start_time:
+                    continue
+
+                for room in suitable_rooms:
+                    conflicts = Booking.objects.filter(
+                        room=room,
+                        date=search_date,
+                        status='active'
+                    ).filter(
+                        Q(start_time__lt=new_end.time()) & Q(end_time__gt=new_start.time())
+                    )
+
+                    if not conflicts.exists():
+                        suggestions.append({
+                            "room": RoomSerializer(room).data,
+                            "date": search_date.isoformat(),
+                            "start_time": new_start.time().isoformat(),
+                            "end_time": new_end.time().isoformat(),
+                        })
+                        if len(suggestions) >= 10:
+                            return suggestions
 
         return suggestions

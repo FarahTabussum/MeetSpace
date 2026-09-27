@@ -7,7 +7,7 @@ import {
   Card, CardContent, Grid, Divider, IconButton,
 } from '@mui/material';
 import {
-  ArrowBack, MeetingRoom, Schedule, People, CheckCircle, AccessTime,
+  ArrowBack, MeetingRoom, Schedule, People, CheckCircle, AccessTime, CalendarMonth,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
@@ -175,30 +175,51 @@ export default function BookRoom() {
       {searchDone && availableRooms.length === 0 && (
         <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            No rooms available for the selected time. Here are some alternatives:
+            No rooms available for the selected time. Here are the next best available options:
           </Alert>
           {suggestions.length > 0 ? (
             <Grid container spacing={2}>
               {suggestions.map((s, i) => (
                 <Grid item xs={12} md={6} key={i}>
-                  <Card variant="outlined" sx={{ cursor: 'pointer', '&:hover': { borderColor: 'primary.main' } }}
-                    onClick={() => handleSuggestionSelect(s)}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
                   >
-                    <CardContent>
-                      <Typography variant="h6">{s.room.room_number}</Typography>
-                      <Typography color="text.secondary">{s.room.floor}</Typography>
-                      <Chip
-                        icon={<AccessTime />}
-                        label={`${s.start_time} - ${s.end_time}`}
-                        size="small" color="primary" sx={{ mt: 1 }}
-                      />
-                    </CardContent>
-                  </Card>
+                    <Card variant="outlined" sx={{ cursor: 'pointer', '&:hover': { borderColor: 'primary.main', boxShadow: 2 } }}
+                      onClick={() => handleSuggestionSelect(s)}
+                    >
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <MeetingRoom color="primary" />
+                          <Typography variant="h6">{s.room.room_number}</Typography>
+                          <Chip label={s.room.floor} size="small" variant="outlined" />
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                          <Chip
+                            icon={<CalendarMonth />}
+                            label={s.date}
+                            size="small" color="primary"
+                          />
+                          <Chip
+                            icon={<AccessTime />}
+                            label={`${s.start_time} - ${s.end_time}`}
+                            size="small" color="secondary"
+                          />
+                          <Chip
+                            icon={<People />}
+                            label={`${s.room.min_occupancy}-${s.room.max_occupancy} people`}
+                            size="small"
+                          />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 </Grid>
               ))}
             </Grid>
           ) : (
-            <Typography color="text.secondary">No alternative time slots found for today.</Typography>
+            <Typography color="text.secondary">No alternative time slots found. Try a different date or time.</Typography>
           )}
         </Paper>
       )}
