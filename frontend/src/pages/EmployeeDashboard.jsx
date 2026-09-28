@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, Chip, CircularProgress,
-  List, ListItem, Divider, Button,
+  List, ListItem, Divider, Button, IconButton,
 } from '@mui/material';
 import {
-  Event, Schedule, Cancel, Add, MeetingRoom,
+  Event, Schedule, Cancel, Add, MeetingRoom, ArrowBack,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
@@ -13,21 +13,26 @@ import EmployeeLayout from '../components/EmployeeLayout';
 
 export default function EmployeeDashboard() {
   const [data, setData] = useState(null);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchDashboard = async () => {
+    const fetchData = async () => {
       try {
-        const res = await api.get('/auth/dashboard/employee/');
-        setData(res.data);
+        const [dashboardRes, bookingsRes] = await Promise.all([
+          api.get('/auth/dashboard/employee/'),
+          api.get('/bookings/'),
+        ]);
+        setData(dashboardRes.data);
+        setBookings(bookingsRes.data);
       } catch (err) {
         toast.error('Failed to load dashboard.');
       } finally {
         setLoading(false);
       }
     };
-    fetchDashboard();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -39,6 +44,8 @@ export default function EmployeeDashboard() {
   }
 
   const { stats, upcoming_bookings } = data;
+  const activeBookings = bookings.filter((b) => b.status === 'active');
+  const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
 
   const statCards = [
     { label: 'Upcoming Bookings', value: stats.upcoming_count, icon: <Event />, color: '#667eea' },
@@ -75,20 +82,20 @@ export default function EmployeeDashboard() {
         ))}
       </Grid>
 
-      {/* Upcoming Bookings */}
-      <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
-        <Typography variant="h6" gutterBottom>Upcoming Bookings</Typography>
+      {/* Active Bookings */}
+      <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4 }}>
+        <Typography variant="h6" gutterBottom>Active Bookings ({activeBookings.length})</Typography>
         <List>
-          {upcoming_bookings.length === 0 ? (
+          {activeBookings.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 3 }}>
               <MeetingRoom sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-              <Typography color="text.secondary">No upcoming bookings.</Typography>
+              <Typography color="text.secondary">No active bookings.</Typography>
               <Button variant="outlined" size="small" sx={{ mt: 1 }} onClick={() => navigate('/employee/book')}>
                 Book a Room
               </Button>
             </Box>
           ) : (
-            upcoming_bookings.map((b, i) => (
+            activeBookings.map((b, i) => (
               <Box key={b.id}>
                 <ListItem>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
@@ -96,13 +103,44 @@ export default function EmployeeDashboard() {
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="subtitle1" fontWeight="medium">{b.meeting_title}</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Room {b.room} | {b.date} | {b.start_time}-{b.end_time}
+                        Room {b.room_details?.room_number || b.room} | {b.date} | {b.start_time}-{b.end_time} | {b.number_of_participants} participants
                       </Typography>
                     </Box>
                     <Chip label="Active" color="success" size="small" />
                   </Box>
                 </ListItem>
-                {i < upcoming_bookings.length - 1 && <Divider />}
+                {i < activeBookings.length - 1 && <Divider />}
+              </Box>
+            ))
+          )}
+        </List>
+      </Paper>
+
+      {/* Cancelled Bookings */}
+      <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
+        <Typography variant="h6" gutterBottom>Cancelled Bookings ({cancelledBookings.length})</Typography>
+        <List>
+          {cancelledBookings.length === 0 ? (
+            <Typography color="text.secondary">No cancelled bookings.</Typography>
+          ) : (
+            cancelledBookings.map((b, i) => (
+              <Box key={b.id}>
+                <ListItem>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                    <Cancel color="error" />
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle1" fontWeight="medium">{b.meeting_title}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Room {b.room_details?.room_number || b.room} | {b.date} | {b.start_time}-{b.end_time}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        Reason: {b.cancellation_reason}
+                      </Typography>
+                    </Box>
+                    <Chip label="Cancelled" color="default" size="small" />
+                  </Box>
+                </ListItem>
+                {i < cancelledBookings.length - 1 && <Divider />}
               </Box>
             ))
           )}
