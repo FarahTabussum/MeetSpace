@@ -106,3 +106,12 @@ SIMPLE_JWT = {
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'midnightinparis185@gmail.com'
+EMAIL_HOST_PASSWORD = 'zsli kxft qvpi yxup'
+DEFAULT_FROM_EMAIL = 'MeetSpace <midnightinparis185@gmail.com>'

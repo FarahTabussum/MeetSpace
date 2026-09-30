@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, Chip, CircularProgress,
-  List, ListItem, Divider, Button, IconButton,
+  List, ListItem, Divider, Button, IconButton, Dialog, DialogTitle,
+  DialogContent, DialogActions, TextField, Alert,
 } from '@mui/material';
 import {
-  Event, Schedule, Cancel, Add, MeetingRoom, ArrowBack,
+  Event, Schedule, Cancel, Add, MeetingRoom,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
@@ -15,25 +17,53 @@ export default function EmployeeDashboard() {
   const [data, setData] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [dashboardRes, bookingsRes] = await Promise.all([
-          api.get('/auth/dashboard/employee/'),
-          api.get('/bookings/'),
-        ]);
-        setData(dashboardRes.data);
-        setBookings(bookingsRes.data);
-      } catch (err) {
-        toast.error('Failed to load dashboard.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const fetchData = async () => {
+    try {
+      const [dashboardRes, bookingsRes] = await Promise.all([
+        api.get('/auth/dashboard/employee/'),
+        api.get('/bookings/'),
+      ]);
+      setData(dashboardRes.data);
+      setBookings(bookingsRes.data);
+    } catch (err) {
+      toast.error('Failed to load dashboard.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const openCancelDialog = (booking) => {
+    setSelectedBooking(booking);
+    setCancelReason('');
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancel = async () => {
+    if (!cancelReason.trim()) {
+      toast.error('Cancellation reason is required.');
+      return;
+    }
+    setCancelling(true);
+    try {
+      await api.post(`/bookings/${selectedBooking.id}/cancel/`, { reason: cancelReason });
+      toast.success('Booking cancelled successfully.');
+      setCancelDialogOpen(false);
+      fetchData();
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Cancellation failed.';
+      toast.error(msg);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -43,7 +73,7 @@ export default function EmployeeDashboard() {
     );
   }
 
-  const { stats, upcoming_bookings } = data;
+  const { stats } = data;
   const activeBookings = bookings.filter((b) => b.status === 'active');
   const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
 
@@ -107,6 +137,9 @@ export default function EmployeeDashboard() {
                       </Typography>
                     </Box>
                     <Chip label="Active" color="success" size="small" />
+                    <IconButton onClick={() => openCancelDialog(b)} color="error">
+                      <Cancel />
+                    </IconButton>
                   </Box>
                 </ListItem>
                 {i < activeBookings.length - 1 && <Divider />}
@@ -118,7 +151,14 @@ export default function EmployeeDashboard() {
 
       {/* Cancelled Bookings */}
       <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
-        <Typography variant="h6" gutterBottom>Cancelled Bookings ({cancelledBookings.length})</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">Cancelled Bookings ({cancelledBookings.length})</Typography>
+          {cancelledBookings.length > 0 && (
+            <Button variant="outlined" color="error" size="small" onClick={() => setBookings(bookings.filter((b) => b.status !== 'cancelled'))}>
+              Clear All
+            </Button>
+          )}
+        </Box>
         <List>
           {cancelledBookings.length === 0 ? (
             <Typography color="text.secondary">No cancelled bookings.</Typography>
@@ -146,6 +186,48 @@ export default function EmployeeDashboard() {
           )}
         </List>
       </Paper>
+
+      {/* Cancel Dialog */}
+      <AnimatePresence>
+        {cancelDialogOpen && selectedBooking && (
+          <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)} maxWidth="sm" fullWidth
+            component={motion.div}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+          >
+            <DialogTitle>Cancel Booking</DialogTitle>
+            <DialogContent>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                <Alert severity="info" action={
+                  <Button color="inherit" size="small" onClick={() => setSelectedBooking(null)}>
+                    Clear
+                  </Button>
+                }>
+                  <strong>{selectedBooking.meeting_title}</strong><br />
+                  {selectedBooking.room_details?.room_number} | {selectedBooking.date} | {selectedBooking.start_time} - {selectedBooking.end_time}
+                </Alert>
+                <TextField
+                  fullWidth
+                  label="Cancellation Reason"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  multiline
+                  rows={3}
+                  required
+                  placeholder="Please provide a reason for cancellation"
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button onClick={() => setCancelDialogOpen(false)}>Keep Booking</Button>
+              <Button onClick={handleCancel} variant="contained" color="error" disabled={cancelling}>
+                {cancelling ? <CircularProgress size={20} /> : 'Confirm Cancellation'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )}
+      </AnimatePresence>
     </EmployeeLayout>
   );
 }

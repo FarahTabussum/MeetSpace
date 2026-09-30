@@ -268,7 +268,11 @@ export default function AdminBookings() {
             <DialogTitle>Cancel Booking</DialogTitle>
             <DialogContent>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                <Alert severity="warning">
+                <Alert severity="warning" action={
+                  <Button color="inherit" size="small" onClick={() => setSelectedBooking(null)}>
+                    Clear
+                  </Button>
+                }>
                   <strong>{selectedBooking.meeting_title}</strong><br />
                   {selectedBooking.room_details?.room_number} | {selectedBooking.date} | {selectedBooking.start_time} - {selectedBooking.end_time}
                 </Alert>

@@ -5,6 +5,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
 from .models import Booking
 from .serializers import BookingSerializer, BookingCreateSerializer, AvailabilitySearchSerializer
 from rooms.models import Room
@@ -66,6 +68,37 @@ class BookingListCreateView(generics.ListCreateAPIView):
             )
 
         booking = serializer.save(user=request.user)
+
+        # Send confirmation email to the employee
+        try:
+            subject = 'Room Booking Confirmed - MeetSpace'
+            message = f"""
+Hello {request.user.first_name},
+
+Your meeting room has been successfully booked!
+
+Booking Details:
+- Meeting Title: {booking.meeting_title}
+- Room: {booking.room.room_number} ({booking.room.floor})
+- Date: {booking.date}
+- Time: {booking.start_time} - {booking.end_time}
+- Participants: {booking.number_of_participants}
+
+Thank you for using MeetSpace!
+
+Best regards,
+MeetSpace Team
+"""
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[request.user.email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass  # Don't fail the booking if email fails
+
         return Response(
             BookingSerializer(booking).data,
             status=status.HTTP_201_CREATED
