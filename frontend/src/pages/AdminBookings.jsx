@@ -14,6 +14,24 @@ import { toast } from 'react-toastify';
 import api from '../api/axios';
 import AdminLayout from '../components/AdminLayout';
 
+const statusLabels = {
+  pending: 'In Progress',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
+  alternatives: 'Alternatives',
+};
+
+const statusColors = {
+  pending: 'warning',
+  approved: 'success',
+  rejected: 'error',
+  cancelled: 'default',
+  alternatives: 'info',
+};
+
+const cancellableStatuses = ['pending', 'approved', 'alternatives'];
+
 export default function AdminBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +43,7 @@ export default function AdminBookings() {
   const [filterDate, setFilterDate] = useState('');
   const [filterRoom, setFilterRoom] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [reasonBooking, setReasonBooking] = useState(null);
   const [rooms, setRooms] = useState([]);
   const navigate = useNavigate();
 
@@ -95,7 +114,7 @@ export default function AdminBookings() {
 
   const getBookingsForDay = (day) => {
     const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return bookings.filter((b) => b.date === dateStr && b.status === 'active');
+    return bookings.filter((b) => b.date === dateStr && ['pending', 'approved', 'alternatives'].includes(b.status));
   };
 
   const renderCalendar = () => {
@@ -173,7 +192,10 @@ export default function AdminBookings() {
               <InputLabel>Status</InputLabel>
               <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} label="Status">
                 <MenuItem value="">All</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="pending">In Progress</MenuItem>
+                <MenuItem value="approved">Approved</MenuItem>
+                <MenuItem value="alternatives">Alternatives</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
                 <MenuItem value="cancelled">Cancelled</MenuItem>
               </Select>
             </FormControl>
@@ -222,13 +244,18 @@ export default function AdminBookings() {
                       <TableCell>{booking.number_of_participants}</TableCell>
                       <TableCell>
                         <Chip
-                          label={booking.status === 'active' ? 'Active' : 'Cancelled'}
-                          color={booking.status === 'active' ? 'success' : 'default'}
+                          label={statusLabels[booking.status] || booking.status}
+                          color={statusColors[booking.status] || 'default'}
                           size="small"
+                          onClick={['cancelled', 'rejected'].includes(booking.status) ? () => setReasonBooking(booking) : undefined}
+                          sx={{
+                            cursor: ['cancelled', 'rejected'].includes(booking.status) ? 'pointer' : 'default',
+                            fontWeight: ['cancelled', 'rejected'].includes(booking.status) ? 'bold' : 'normal',
+                          }}
                         />
                       </TableCell>
                       <TableCell>
-                        {booking.status === 'active' && (
+                        {cancellableStatuses.includes(booking.status) && (
                           <IconButton onClick={() => openCancelDialog(booking)} color="error">
                             <Cancel />
                           </IconButton>
@@ -265,6 +292,45 @@ export default function AdminBookings() {
           </Box>
         </Paper>
       )}
+
+      {/* Cancellation / Rejection Reason Dialog */}
+      <Dialog open={!!reasonBooking} onClose={() => setReasonBooking(null)} maxWidth="sm" fullWidth
+        component={motion.div}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+      >
+        {reasonBooking && (
+          <>
+            <DialogTitle>
+              {reasonBooking.status === 'cancelled' ? 'Cancellation Reason' : 'Rejection Reason'}
+            </DialogTitle>
+            <DialogContent>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                <Alert severity={reasonBooking.status === 'cancelled' ? 'warning' : 'error'}>
+                  <strong>{reasonBooking.meeting_title}</strong><br />
+                  {reasonBooking.room_details?.room_number} | {reasonBooking.date} | {reasonBooking.start_time} - {reasonBooking.end_time}<br />
+                  Booked by: {reasonBooking.user_details?.first_name} {reasonBooking.user_details?.last_name}
+                </Alert>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'grey.50' }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>Reason:</Typography>
+                  <Typography variant="body1">
+                    {reasonBooking.cancellation_reason || 'No reason provided.'}
+                  </Typography>
+                  {reasonBooking.cancelled_at && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                      {reasonBooking.status === 'cancelled' ? 'Cancelled' : 'Rejected'} at: {new Date(reasonBooking.cancelled_at).toLocaleString()}
+                    </Typography>
+                  )}
+                </Paper>
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button onClick={() => setReasonBooking(null)} variant="contained">Close</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
 
       {/* Cancel Dialog */}
       <AnimatePresence>

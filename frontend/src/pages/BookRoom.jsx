@@ -13,6 +13,8 @@ import { toast } from 'react-toastify';
 import api from '../api/axios';
 import EmployeeLayout from '../components/EmployeeLayout';
 
+const requirementOptions = ['IT technologies', 'Refreshment'];
+
 export default function BookRoom() {
   const [form, setForm] = useState({
     date: '', start_time: '', end_time: '', number_of_participants: 1,
@@ -23,7 +25,8 @@ export default function BookRoom() {
   const [searchDone, setSearchDone] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [meetingTitle, setMeetingTitle] = useState('');
-  const [requirements, setRequirements] = useState('');
+  const [reqCategories, setReqCategories] = useState([]);
+  const [reqDetails, setReqDetails] = useState({ 'IT technologies': '', 'Refreshment': '' });
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [booking, setBooking] = useState(false);
   const navigate = useNavigate();
@@ -53,6 +56,20 @@ export default function BookRoom() {
     setConfirmOpen(true);
   };
 
+  const toggleReqCategory = (cat) => {
+    setReqCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const buildRequirements = () => {
+    const parts = reqCategories.map((cat) => {
+      const detail = (reqDetails[cat] || '').trim();
+      return detail ? `${cat}: ${detail}` : cat;
+    });
+    return parts.join('\n');
+  };
+
   const handleConfirmBooking = async () => {
     setBooking(true);
     try {
@@ -62,11 +79,13 @@ export default function BookRoom() {
         start_time: form.start_time,
         end_time: form.end_time,
         number_of_participants: form.number_of_participants,
-        requirements: requirements,
+        requirements: buildRequirements(),
         room: selectedRoom.id,
       });
       toast.success('Room Booking Request Sent Successfully');
       setConfirmOpen(false);
+      setReqCategories([]);
+      setReqDetails({ 'IT technologies': '', 'Refreshment': '' });
       navigate('/employee/bookings');
     } catch (err) {
       const msg = err.response?.data?.error || 'Booking failed.';
@@ -235,13 +254,47 @@ export default function BookRoom() {
                   onChange={(e) => setMeetingTitle(e.target.value)}
                   required placeholder="e.g., Sprint Planning"
                 />
-                <TextField
-                  fullWidth label="Requirements (optional)" value={requirements}
-                  onChange={(e) => setRequirements(e.target.value)}
-                  multiline
-                  rows={3}
-                  placeholder="e.g., Projector, Whiteboard, Video conferencing equipment..."
-                />
+                <Box>
+                  <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+                    Requirements <Typography component="span" color="text.secondary">(optional)</Typography>
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
+                    {requirementOptions.map((opt) => {
+                      const selected = reqCategories.includes(opt);
+                      return (
+                        <Chip
+                          key={opt}
+                          label={opt}
+                          clickable
+                          color={selected ? 'primary' : 'default'}
+                          variant={selected ? 'filled' : 'outlined'}
+                          onClick={() => toggleReqCategory(opt)}
+                          sx={{ fontWeight: selected ? 'bold' : 'normal' }}
+                        />
+                      );
+                    })}
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {reqCategories.includes('IT technologies') && (
+                      <TextField
+                        fullWidth label="IT technologies" value={reqDetails['IT technologies']}
+                        onChange={(e) => setReqDetails({ ...reqDetails, 'IT technologies': e.target.value })}
+                        multiline
+                        rows={2}
+                        placeholder="e.g., Projector, HDMI cable, Video conferencing setup..."
+                      />
+                    )}
+                    {reqCategories.includes('Refreshment') && (
+                      <TextField
+                        fullWidth label="Refreshment" value={reqDetails['Refreshment']}
+                        onChange={(e) => setReqDetails({ ...reqDetails, 'Refreshment': e.target.value })}
+                        multiline
+                        rows={2}
+                        placeholder="e.g., Coffee, Snacks, Water bottles for 10 people..."
+                      />
+                    )}
+                  </Box>
+                </Box>
                 <Divider />
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <Chip icon={<MeetingRoom />} label={selectedRoom.room_number} color="primary" />

@@ -268,7 +268,7 @@ class CancelBookingView(APIView):
         if request.user.role != 'HR-Admin' and booking.user != request.user:
             return Response({"error": "You do not have permission to cancel this booking."}, status=status.HTTP_403_FORBIDDEN)
 
-        if booking.status not in ['approved', 'pending']:
+        if booking.status not in ['approved', 'pending', 'alternatives']:
             return Response({"error": "This booking cannot be cancelled."}, status=status.HTTP_400_BAD_REQUEST)
 
         reason = request.data.get('reason', '').strip()
