@@ -4,14 +4,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, Chip, CircularProgress,
   List, ListItem, Divider, Button, IconButton, Dialog, DialogTitle,
-  DialogContent, DialogActions, TextField, Alert,
+  DialogContent, DialogActions, TextField, Alert, Table, TableBody,
+  TableCell, TableContainer, TableHead, TableRow, Radio, RadioGroup,
+  FormControlLabel,
 } from '@mui/material';
 import {
-  Event, Schedule, Cancel, Add, MeetingRoom,
+  Event, Schedule, Cancel, Add, MeetingRoom, CheckCircle,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
 import EmployeeLayout from '../components/EmployeeLayout';
+
+const statusLabels = {
+  pending: 'In Progress',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
+  alternatives: 'Alternatives',
+};
+
+const statusColors = {
+  pending: 'warning',
+  approved: 'success',
+  rejected: 'error',
+  cancelled: 'default',
+  alternatives: 'info',
+};
 
 export default function EmployeeDashboard() {
   const [data, setData] = useState(null);
@@ -22,6 +40,12 @@ export default function EmployeeDashboard() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const navigate = useNavigate();
+
+  // Alternatives modal state
+  const [altModalOpen, setAltModalOpen] = useState(false);
+  const [altBooking, setAltBooking] = useState(null);
+  const [selectedAltIndex, setSelectedAltIndex] = useState(null);
+  const [altProcessing, setAltProcessing] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -58,10 +82,49 @@ export default function EmployeeDashboard() {
       setCancelDialogOpen(false);
       fetchData();
     } catch (err) {
-      const msg = err.response?.data?.error || 'Cancellation failed.';
-      toast.error(msg);
+      toast.error(err.response?.data?.error || 'Cancellation failed.');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const openAltModal = (booking) => {
+    setAltBooking(booking);
+    setSelectedAltIndex(null);
+    setAltModalOpen(true);
+  };
+
+  const handleAcceptAlternative = async () => {
+    if (selectedAltIndex === null) {
+      toast.error('Please select an alternative.');
+      return;
+    }
+    setAltProcessing(true);
+    try {
+      await api.post(`/bookings/${altBooking.id}/accept-alternative/`, {
+        alternative_index: selectedAltIndex,
+      });
+      toast.success('Alternative accepted. Booking updated.');
+      setAltModalOpen(false);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to accept alternative.');
+    } finally {
+      setAltProcessing(false);
+    }
+  };
+
+  const handleRejectAlternatives = async () => {
+    setAltProcessing(true);
+    try {
+      await api.post(`/bookings/${altBooking.id}/reject-alternative/`);
+      toast.success('Alternatives rejected.');
+      setAltModalOpen(false);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to reject alternatives.');
+    } finally {
+      setAltProcessing(false);
     }
   };
 
@@ -74,8 +137,8 @@ export default function EmployeeDashboard() {
   }
 
   const { stats } = data;
-  const activeBookings = bookings.filter((b) => b.status === 'active');
-  const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
+  const activeBookings = bookings.filter((b) => ['pending', 'approved', 'alternatives'].includes(b.status));
+  const cancelledBookings = bookings.filter((b) => ['cancelled', 'rejected'].includes(b.status));
 
   const statCards = [
     { label: 'Upcoming Bookings', value: stats.upcoming_count, icon: <Event />, color: '#667eea' },
@@ -112,41 +175,67 @@ export default function EmployeeDashboard() {
         ))}
       </Grid>
 
-      {/* Active Bookings */}
+      {/* Active Bookings Table */}
       <Paper elevation={2} sx={{ p: 3, borderRadius: 3, mb: 4 }}>
         <Typography variant="h6" gutterBottom>Active Bookings ({activeBookings.length})</Typography>
-        <List>
-          {activeBookings.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 3 }}>
-              <MeetingRoom sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-              <Typography color="text.secondary">No active bookings.</Typography>
-              <Button variant="outlined" size="small" sx={{ mt: 1 }} onClick={() => navigate('/employee/book')}>
-                Book a Room
-              </Button>
-            </Box>
-          ) : (
-            activeBookings.map((b, i) => (
-              <Box key={b.id}>
-                <ListItem>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                    <Event color="primary" />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle1" fontWeight="medium">{b.meeting_title}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Room {b.room_details?.room_number || b.room} | {b.date} | {b.start_time}-{b.end_time} | {b.number_of_participants} participants
-                      </Typography>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'primary.main' }}>
+                <TableCell sx={{ color: 'white' }}>Meeting Title</TableCell>
+                <TableCell sx={{ color: 'white' }}>Room</TableCell>
+                <TableCell sx={{ color: 'white' }}>Date</TableCell>
+                <TableCell sx={{ color: 'white' }}>Time</TableCell>
+                <TableCell sx={{ color: 'white' }}>Participants</TableCell>
+                <TableCell sx={{ color: 'white' }}>Status</TableCell>
+                <TableCell sx={{ color: 'white' }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {activeBookings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    <Box sx={{ py: 3 }}>
+                      <MeetingRoom sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
+                      <Typography color="text.secondary">No active bookings.</Typography>
                     </Box>
-                    <Chip label="Active" color="success" size="small" />
-                    <IconButton onClick={() => openCancelDialog(b)} color="error">
-                      <Cancel />
-                    </IconButton>
-                  </Box>
-                </ListItem>
-                {i < activeBookings.length - 1 && <Divider />}
-              </Box>
-            ))
-          )}
-        </List>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                activeBookings.map((b) => (
+                  <TableRow key={b.id} hover>
+                    <TableCell>{b.meeting_title}</TableCell>
+                    <TableCell>{b.room_details?.room_number || b.room}</TableCell>
+                    <TableCell>{b.date}</TableCell>
+                    <TableCell>{b.start_time}-{b.end_time}</TableCell>
+                    <TableCell>{b.number_of_participants}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={statusLabels[b.status] || b.status}
+                        color={statusColors[b.status] || 'default'}
+                        size="small"
+                        sx={{ cursor: b.status === 'alternatives' ? 'pointer' : 'default' }}
+                        onClick={b.status === 'alternatives' ? () => openAltModal(b) : undefined}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {b.status !== 'approved' && (
+                        <IconButton onClick={() => openCancelDialog(b)} color="error" size="small">
+                          <Cancel />
+                        </IconButton>
+                      )}
+                      {b.status === 'approved' && (
+                        <IconButton onClick={() => openCancelDialog(b)} color="error" size="small">
+                          <Cancel />
+                        </IconButton>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Paper>
 
       {/* Cancelled Bookings */}
@@ -154,7 +243,7 @@ export default function EmployeeDashboard() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6">Cancelled Bookings ({cancelledBookings.length})</Typography>
           {cancelledBookings.length > 0 && (
-            <Button variant="outlined" color="error" size="small" onClick={() => setBookings(bookings.filter((b) => b.status !== 'cancelled'))}>
+            <Button variant="outlined" color="error" size="small" onClick={() => { setBookings(bookings.filter((b) => !['cancelled', 'rejected'].includes(b.status))); toast.success('Cancelled bookings cleared.'); }}>
               Clear All
             </Button>
           )}
@@ -177,7 +266,7 @@ export default function EmployeeDashboard() {
                         Reason: {b.cancellation_reason}
                       </Typography>
                     </Box>
-                    <Chip label="Cancelled" color="default" size="small" />
+                    <Chip label={statusLabels[b.status] || b.status} color={statusColors[b.status] || 'default'} size="small" />
                   </Box>
                 </ListItem>
                 {i < cancelledBookings.length - 1 && <Divider />}
@@ -223,6 +312,84 @@ export default function EmployeeDashboard() {
               <Button onClick={() => setCancelDialogOpen(false)}>Keep Booking</Button>
               <Button onClick={handleCancel} variant="contained" color="error" disabled={cancelling}>
                 {cancelling ? <CircularProgress size={20} /> : 'Confirm Cancellation'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )}
+      </AnimatePresence>
+
+      {/* Alternatives Modal */}
+      <AnimatePresence>
+        {altModalOpen && altBooking && (
+          <Dialog open={altModalOpen} onClose={() => setAltModalOpen(false)} maxWidth="sm" fullWidth
+            component={motion.div}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+          >
+            <DialogTitle>Alternative Booking Options</DialogTitle>
+            <DialogContent>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                <Alert severity="info">
+                  The admin has suggested alternative options for your booking. Please select one to accept, or reject all.
+                </Alert>
+
+                {altBooking.alternatives && altBooking.alternatives.length > 0 ? (
+                  <RadioGroup value={selectedAltIndex} onChange={(e) => setSelectedAltIndex(Number(e.target.value))}>
+                    {altBooking.alternatives.map((alt, i) => (
+                      <Paper
+                        key={i}
+                        variant="outlined"
+                        sx={{
+                          p: 2,
+                          mb: 1,
+                          borderRadius: 2,
+                          cursor: 'pointer',
+                          borderColor: selectedAltIndex === i ? 'primary.main' : 'divider',
+                          borderWidth: selectedAltIndex === i ? 2 : 1,
+                        }}
+                        onClick={() => setSelectedAltIndex(i)}
+                      >
+                        <FormControlLabel
+                          value={i}
+                          control={<Radio />}
+                          label={
+                            <Box>
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                Option {i + 1}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Room: {alt.room_number || alt.room || 'N/A'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Date: {alt.date}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Time: {alt.start_time} - {alt.end_time}
+                              </Typography>
+                            </Box>
+                          }
+                          sx={{ width: '100%', alignItems: 'flex-start' }}
+                        />
+                      </Paper>
+                    ))}
+                  </RadioGroup>
+                ) : (
+                  <Typography color="text.secondary">No alternatives available.</Typography>
+                )}
+
+                <Typography variant="h6" fontWeight="bold" sx={{ mt: 2 }}>
+                  Do you accept?
+                </Typography>
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ p: 2, gap: 1 }}>
+              <Button onClick={() => setAltModalOpen(false)}>Cancel</Button>
+              <Button onClick={handleRejectAlternatives} variant="outlined" color="error" disabled={altProcessing}>
+                Reject All
+              </Button>
+              <Button onClick={handleAcceptAlternative} variant="contained" color="success" disabled={altProcessing || selectedAltIndex === null}>
+                {altProcessing ? <CircularProgress size={20} /> : 'Accept'}
               </Button>
             </DialogActions>
           </Dialog>

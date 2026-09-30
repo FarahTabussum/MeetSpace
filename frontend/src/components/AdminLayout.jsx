@@ -14,6 +14,7 @@ const sidebarItems = [
   { label: 'Dashboard', icon: <Dashboard />, path: '/admin/dashboard' },
   { label: 'User Management', icon: <People />, path: '/admin/users' },
   { label: 'Room Management', icon: <MeetingRoom />, path: '/admin/rooms' },
+  { label: 'Booking Approvals', icon: <ListAlt />, path: '/admin/approvals' },
   { label: 'All Bookings', icon: <ListAlt />, path: '/admin/bookings' },
 ];
 

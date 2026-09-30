@@ -38,6 +38,14 @@ export default function AdminDashboard() {
     );
   }
 
+  if (!data) {
+    return (
+      <AdminLayout>
+        <Typography color="text.secondary">Failed to load dashboard data.</Typography>
+      </AdminLayout>
+    );
+  }
+
   const { stats, recent_bookings } = data;
 
   const statCards = [

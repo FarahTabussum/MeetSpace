@@ -12,6 +12,7 @@ import api from '../api/axios';
 
 const sidebarItems = [
   { label: 'Dashboard', icon: <Dashboard />, path: '/employee/dashboard' },
+  { label: 'Room Booking', icon: <BookOnline />, path: '/employee/bookings' },
 ];
 
 export default function EmployeeLayout({ children }) {

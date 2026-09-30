@@ -134,11 +134,21 @@ export default function AdminBookings() {
         <Typography variant="h5" fontWeight="bold">All Bookings</Typography>
       </Box>
 
-      {/* Tabs */}
-      <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ mb: 3 }}>
-        <Tab icon={<ViewList />} label="List View" />
-        <Tab icon={<CalendarMonth />} label="Calendar View" />
-      </Tabs>
+      {/* Header with Clear Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
+          <Tab icon={<ViewList />} label="List View" />
+          <Tab icon={<CalendarMonth />} label="Calendar View" />
+        </Tabs>
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={() => { setBookings([]); toast.success('All bookings cleared.'); }}
+          disabled={bookings.length === 0}
+        >
+          Clear All
+        </Button>
+      </Box>
 
       {/* List View */}
       {tabValue === 0 && (

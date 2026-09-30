@@ -7,7 +7,7 @@ import {
   DialogActions, TextField, CircularProgress, IconButton, Alert,
 } from '@mui/material';
 import {
-  ArrowBack, Cancel, MeetingRoom, Schedule, People, CheckCircle, FilterList,
+  ArrowBack, Cancel, MeetingRoom, Schedule, People, CheckCircle, FilterList, Add,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
@@ -67,9 +67,16 @@ export default function MyBookings() {
   return (
     <EmployeeLayout>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <IconButton onClick={() => navigate(-1)}><ArrowBack /></IconButton>
-        <Typography variant="h5" fontWeight="bold">My Bookings</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <IconButton onClick={() => navigate(-1)}><ArrowBack /></IconButton>
+          <Typography variant="h5" fontWeight="bold">Room Booking</Typography>
+        </Box>
+        <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/employee/book')}
+          sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 'bold', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+        >
+          Book A Room
+        </Button>
       </Box>
 
       {/* Filter */}

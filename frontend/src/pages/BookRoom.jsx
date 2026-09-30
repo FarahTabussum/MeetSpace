@@ -23,6 +23,7 @@ export default function BookRoom() {
   const [searchDone, setSearchDone] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [meetingTitle, setMeetingTitle] = useState('');
+  const [requirements, setRequirements] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [booking, setBooking] = useState(false);
   const navigate = useNavigate();
@@ -61,9 +62,10 @@ export default function BookRoom() {
         start_time: form.start_time,
         end_time: form.end_time,
         number_of_participants: form.number_of_participants,
+        requirements: requirements,
         room: selectedRoom.id,
       });
-      toast.success('Room booked successfully!');
+      toast.success('Room Booking Request Sent Successfully');
       setConfirmOpen(false);
       navigate('/employee/bookings');
     } catch (err) {
@@ -232,6 +234,13 @@ export default function BookRoom() {
                   fullWidth label="Meeting Title" value={meetingTitle}
                   onChange={(e) => setMeetingTitle(e.target.value)}
                   required placeholder="e.g., Sprint Planning"
+                />
+                <TextField
+                  fullWidth label="Requirements (optional)" value={requirements}
+                  onChange={(e) => setRequirements(e.target.value)}
+                  multiline
+                  rows={3}
+                  placeholder="e.g., Projector, Whiteboard, Video conferencing equipment..."
                 />
                 <Divider />
                 <Box sx={{ display: 'flex', gap: 2 }}>

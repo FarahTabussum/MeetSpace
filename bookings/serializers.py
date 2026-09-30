@@ -12,8 +12,9 @@ class BookingSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'meeting_title', 'date', 'start_time', 'end_time',
-            'number_of_participants', 'room', 'room_details', 'user', 'user_details',
-            'status', 'cancellation_reason', 'cancelled_at', 'created_at',
+            'number_of_participants', 'requirements', 'room', 'room_details',
+            'user', 'user_details', 'status', 'cancellation_reason',
+            'cancelled_at', 'alternatives', 'created_at',
         ]
         read_only_fields = ['id', 'status', 'cancellation_reason', 'cancelled_at', 'created_at']
 
@@ -21,7 +22,7 @@ class BookingSerializer(serializers.ModelSerializer):
 class BookingCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
-        fields = ['meeting_title', 'date', 'start_time', 'end_time', 'number_of_participants', 'room']
+        fields = ['meeting_title', 'date', 'start_time', 'end_time', 'number_of_participants', 'requirements', 'room']
 
 
 class AvailabilitySearchSerializer(serializers.Serializer):
