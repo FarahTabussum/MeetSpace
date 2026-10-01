@@ -5,14 +5,16 @@ import {
   ListItemButton, ListItemIcon, ListItemText,
 } from '@mui/material';
 import {
-  MeetingRoom, Dashboard, BookOnline, ListAlt, Logout,
+  MeetingRoom, Dashboard, BookOnline, ListAlt, Logout, Campaign, Info,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
 
 const sidebarItems = [
-  { label: 'Dashboard', icon: <Dashboard />, path: '/employee/dashboard' },
+  { label: 'Overview', icon: <Dashboard />, path: '/employee/dashboard' },
   { label: 'Room Booking', icon: <BookOnline />, path: '/employee/bookings' },
+  { label: 'Announcement', icon: <Campaign />, path: '/employee/announcements' },
+  { label: 'Essential Information & Forms', icon: <Info />, path: '/employee/essential-info' },
 ];
 
 export default function EmployeeLayout({ children }) {

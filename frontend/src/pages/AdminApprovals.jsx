@@ -13,7 +13,7 @@ import { toast } from 'react-toastify';
 import api from '../api/axios';
 import AdminLayout from '../components/AdminLayout';
 
-export default function AdminApprovals() {
+export function AdminApprovalsContent({ embedded = false }) {
   const [pendingBookings, setPendingBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
@@ -179,8 +179,10 @@ export default function AdminApprovals() {
   };
 
   return (
-    <AdminLayout>
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>Booking Approvals</Typography>
+    <>
+      {!embedded && (
+        <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>Booking Approvals</Typography>
+      )}
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -460,6 +462,14 @@ export default function AdminApprovals() {
           </Dialog>
         )}
       </AnimatePresence>
+    </>
+  );
+}
+
+export default function AdminApprovals() {
+  return (
+    <AdminLayout>
+      <AdminApprovalsContent />
     </AdminLayout>
   );
 }

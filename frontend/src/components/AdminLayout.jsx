@@ -5,7 +5,7 @@ import {
   ListItemButton, ListItemIcon, ListItemText,
 } from '@mui/material';
 import {
-  MeetingRoom, Dashboard, People, Event, Logout, ListAlt,
+  MeetingRoom, Dashboard, People, Event, Logout, ListAlt, Campaign,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
@@ -13,9 +13,9 @@ import api from '../api/axios';
 const sidebarItems = [
   { label: 'Dashboard', icon: <Dashboard />, path: '/admin/dashboard' },
   { label: 'User Management', icon: <People />, path: '/admin/users' },
-  { label: 'Room Management', icon: <MeetingRoom />, path: '/admin/rooms' },
-  { label: 'Booking Approvals', icon: <ListAlt />, path: '/admin/approvals' },
+  { label: 'Meeting Rooms', icon: <MeetingRoom />, path: '/admin/meeting-rooms' },
   { label: 'All Bookings', icon: <ListAlt />, path: '/admin/bookings' },
+  { label: 'Announcement', icon: <Campaign />, path: '/admin/announcements' },
 ];
 
 export default function AdminLayout({ children }) {

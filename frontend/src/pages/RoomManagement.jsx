@@ -17,7 +17,7 @@ const defaultForm = {
   room_number: '', floor: '', min_occupancy: 1, max_occupancy: 10, is_active: true,
 };
 
-export default function RoomManagement() {
+export function RoomManagementContent({ embedded = false }) {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -92,13 +92,15 @@ export default function RoomManagement() {
   };
 
   return (
-    <AdminLayout>
+    <>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate(-1)}><ArrowBack /></IconButton>
-          <Typography variant="h5" fontWeight="bold">Room Management</Typography>
-        </Box>
+      <Box sx={{ display: 'flex', justifyContent: embedded ? 'flex-end' : 'space-between', alignItems: 'center', mb: 3 }}>
+        {!embedded && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton onClick={() => navigate(-1)}><ArrowBack /></IconButton>
+            <Typography variant="h5" fontWeight="bold">Room Management</Typography>
+          </Box>
+        )}
         <Button variant="contained" startIcon={<Add />} onClick={openAddDialog}>
           Add Room
         </Button>
@@ -212,6 +214,14 @@ export default function RoomManagement() {
           </Dialog>
         )}
       </AnimatePresence>
+    </>
+  );
+}
+
+export default function RoomManagement() {
+  return (
+    <AdminLayout>
+      <RoomManagementContent />
     </AdminLayout>
   );
 }
